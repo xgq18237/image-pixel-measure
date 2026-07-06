@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>图片像素测距工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-theme="light">
+    <div class="app">
+      <header class="toolbar">
+        <div class="brand">
+          <span>图片像素测距</span>
+        </div>
+
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="切换黑白模式" title="切换黑白模式" data-tooltip="切换黑白模式">
+          <svg class="theme-icon theme-icon-light" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 17.25A5.25 5.25 0 1 0 12 6.75a5.25 5.25 0 0 0 0 10.5ZM12 2.75v1.5M12 19.75v1.5M4.42 4.42l1.06 1.06M18.52 18.52l1.06 1.06M2.75 12h1.5M19.75 12h1.5M4.42 19.58l1.06-1.06M18.52 5.48l1.06-1.06" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+          </svg>
+          <svg class="theme-icon theme-icon-dark" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14.75 3.5A7.75 7.75 0 1 0 20.5 9.25 6.15 6.15 0 0 1 14.75 3.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+          </svg>
+        </button>
+
+        <label class="folder-button" title="选择文件夹" data-tooltip="选择文件夹">
+          <input id="folderInput" type="file" webkitdirectory multiple accept="image/*" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.75 7.75A2.75 2.75 0 0 1 6.5 5h3.05c.73 0 1.42.29 1.93.8l1.02 1.02c.23.24.55.37.88.37h4.12a2.75 2.75 0 0 1 2.75 2.75v6.31A2.75 2.75 0 0 1 17.5 19H6.5a2.75 2.75 0 0 1-2.75-2.75v-8.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6" />
+          </svg>
+          <span>选择文件夹</span>
+        </label>
+
+        <div class="tool-group">
+          <button id="fitButton" class="icon-btn" type="button" aria-label="适应窗口" title="适应窗口" data-tooltip="适应窗口">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+          </button>
+          <button id="actualButton" class="ratio-btn" type="button" aria-label="原始尺寸" title="原始尺寸" data-tooltip="原始尺寸">1:1</button>
+          <button id="zoomOutButton" class="icon-btn" type="button" aria-label="缩小" title="缩小" data-tooltip="缩小">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+          </button>
+          <output id="zoomLabel">100%</output>
+          <button id="zoomInButton" class="icon-btn" type="button" aria-label="放大" title="放大" data-tooltip="放大">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+          </button>
+          <button id="boxSelectButton" class="icon-btn" type="button" aria-label="框选" aria-pressed="false" title="框选" data-tooltip="框选">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 16.5v-9Z" fill="none" stroke="currentColor" stroke-dasharray="3 2.4" stroke-linecap="round" stroke-width="1.7" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="tool-group data-actions">
+          <button id="exportButton" class="icon-text-btn" type="button" hidden title="导出 JSON" data-tooltip="导出 JSON">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+            <span>JSON</span>
+          </button>
+          <button id="clearCacheButton" class="icon-btn" type="button" hidden aria-label="清空缓存" title="清空缓存" data-tooltip="清空缓存">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 4h6m-8.5 4h11M10 11v6m4-6v6M8 8l.7 11A2.2 2.2 0 0 0 10.9 21h2.2a2.2 2.2 0 0 0 2.2-2L16 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="export-settings" aria-label="导出参数">
+          <label>
+            横格
+            <input id="horizontalGridInput" type="text" inputmode="decimal" value="1" />
+          </label>
+          <label>
+            纵格
+            <input id="verticalGridInput" type="text" inputmode="decimal" value="1" />
+          </label>
+          <label>
+            实际高
+            <input id="physicalHeightInput" type="text" inputmode="decimal" placeholder="可空" />
+          </label>
+        </div>
+
+        <label class="color-toggle">
+          <input id="dominantColorToggle" type="checkbox" />
+          平均色
+        </label>
+
+        <div class="color-field" id="dominantColorPanel" title="点击字段或按钮可复制" hidden>
+          <span id="dominantColorSwatch" class="color-swatch">
+            <input id="dominantColorPicker" class="swatch-picker" type="color" aria-label="选择平均色" />
+          </span>
+          <input id="dominantColorField" type="text" readonly value="平均色：未计算" aria-label="平均色" />
+          <button id="copyColorButton" class="icon-btn" type="button" aria-label="复制平均色" title="复制平均色" data-tooltip="复制平均色">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 8.5A2.5 2.5 0 0 1 10.5 6h6A2.5 2.5 0 0 1 19 8.5v8A2.5 2.5 0 0 1 16.5 19h-6A2.5 2.5 0 0 1 8 16.5v-8Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+              <path d="M6 15.5A2.5 2.5 0 0 1 4 13V6.5A2.5 2.5 0 0 1 6.5 4H13a2.5 2.5 0 0 1 2.5 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="picked-color-field">
+          <span id="pickedColorSwatch" class="color-swatch">
+            <input id="pickedColorPicker" class="swatch-picker" type="color" aria-label="选择点击颜色" />
+          </span>
+          <input id="pickedColorField" type="text" readonly value="点击颜色：未选择" aria-label="当前点击颜色" />
+        </div>
+
+        <div class="readout" id="readout">未选择图片</div>
+      </header>
+
+      <main class="workspace">
+        <section class="viewer-panel">
+          <div class="corner-cell"></div>
+          <canvas id="topRuler" class="top-ruler"></canvas>
+          <canvas id="leftRuler" class="left-ruler"></canvas>
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="imageCanvas"></canvas>
+            <div class="loupe" id="loupe" aria-hidden="true">
+              <canvas id="loupeCanvas" width="168" height="168"></canvas>
+              <div class="loupe-label" id="loupeLabel">x 0, y 0</div>
+            </div>
+            <div class="empty-state" id="emptyState">
+              <strong>选择包含图片的文件夹</strong>
+              <span>支持 JPG、PNG、GIF、WebP、BMP、SVG 等浏览器可读取格式</span>
+            </div>
+          </div>
+        </section>
+
+        <div
+          id="sidebarResizer"
+          class="sidebar-resizer"
+          role="separator"
+          aria-label="调整右侧图片栏宽度"
+          aria-orientation="vertical"
+          tabindex="0"
+        ></div>
+
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <span>图片</span>
+            <span id="imageCount">0</span>
+          </div>
+          <div id="thumbList" class="thumb-list"></div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "image-pixel-measure",
+  "version": "1.0.0",
+  "private": false,
+  "description": "本地化图片像素测距、取色、框选和 JSON 导出工具",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "vite": "^8.0.13"
+  }
+}
