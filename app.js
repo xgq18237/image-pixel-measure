@@ -1468,6 +1468,8 @@ function drawBoxSelection() {
   imageCtx.save();
   if (state.boxGrid) {
     drawBoxGrid();
+  } else if (state.boxSelectDraft && state.dragStart?.boxAction !== "create") {
+    drawBoxGridPreview(state.boxSelectDraft);
   }
   if (state.boxSelectDraft) {
     drawImageRect(state.boxSelectDraft, {
@@ -1480,9 +1482,38 @@ function drawBoxSelection() {
   imageCtx.restore();
 }
 
+function drawBoxGridPreview(origin) {
+  const visibleGrid = buildVisibleBoxGrid(origin);
+  const visibleTileCount = visibleGrid.cols.length * visibleGrid.rows.length;
+  if (visibleTileCount > MAX_VISIBLE_BOX_TILES) {
+    drawBoxGridDensityLabel(visibleTileCount);
+    return;
+  }
+
+  visibleGrid.rows.forEach((row) => {
+    visibleGrid.cols.forEach((col) => {
+      const isOrigin = col.offset === 0 && row.offset === 0;
+      drawImageRect(
+        {
+          x: col.x,
+          y: row.y,
+          width: col.width,
+          height: row.height,
+        },
+        {
+          fill: isOrigin ? "rgba(14, 165, 233, 0.08)" : "rgba(14, 165, 233, 0.025)",
+          semanticRgb: [2, 132, 199],
+          alpha: isOrigin ? 0.46 : 0.24,
+          lineWidth: isOrigin ? 1 : 0.65,
+        },
+      );
+    });
+  });
+}
+
 function drawBoxGrid() {
   const grid = state.boxGrid;
-  const visibleGrid = getVisibleBoxGrid(grid);
+  const visibleGrid = buildVisibleBoxGrid(grid.origin);
   const visibleTileCount = visibleGrid.cols.length * visibleGrid.rows.length;
   const canDrawTiles = visibleTileCount <= MAX_VISIBLE_BOX_TILES;
 
@@ -1524,16 +1555,51 @@ function drawBoxGrid() {
   }
 }
 
-function getVisibleBoxGrid(grid) {
+function buildVisibleBoxGrid(origin) {
   const rect = imageCanvas.getBoundingClientRect();
   const left = Math.max(0, (-state.offsetX) / state.scale);
   const top = Math.max(0, (-state.offsetY) / state.scale);
   const right = Math.min(state.bitmap.naturalWidth, (rect.width - state.offsetX) / state.scale);
   const bottom = Math.min(state.bitmap.naturalHeight, (rect.height - state.offsetY) / state.scale);
+  const width = Math.max(1, origin.width);
+  const height = Math.max(1, origin.height);
+  const cols = [];
+  const rows = [];
+
+  const minColOffset = Math.floor((left - origin.x) / width);
+  const maxColOffset = Math.ceil((right - origin.x) / width);
+  const minRowOffset = Math.floor((top - origin.y) / height);
+  const maxRowOffset = Math.ceil((bottom - origin.y) / height);
+
+  for (let offset = minColOffset; offset <= maxColOffset; offset += 1) {
+    const x = origin.x + offset * width;
+    const colLeft = Math.max(0, x);
+    const colRight = Math.min(state.bitmap.naturalWidth, x + width);
+    if (colRight > colLeft) {
+      cols.push({
+        offset,
+        x: colLeft,
+        width: colRight - colLeft,
+      });
+    }
+  }
+
+  for (let offset = minRowOffset; offset <= maxRowOffset; offset += 1) {
+    const y = origin.y + offset * height;
+    const rowTop = Math.max(0, y);
+    const rowBottom = Math.min(state.bitmap.naturalHeight, y + height);
+    if (rowBottom > rowTop) {
+      rows.push({
+        offset,
+        y: rowTop,
+        height: rowBottom - rowTop,
+      });
+    }
+  }
 
   return {
-    cols: grid.cols.filter((col) => col.x <= right && col.x + col.width >= left),
-    rows: grid.rows.filter((row) => row.y <= bottom && row.y + row.height >= top),
+    cols,
+    rows,
   };
 }
 

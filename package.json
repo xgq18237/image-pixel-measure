@@ -5,6 +5,7 @@
   "description": "本地化图片像素测距、取色、框选和 JSON 导出工具",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "devDependencies": {
