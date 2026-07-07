@@ -1,4 +1,5 @@
 const folderInput = document.getElementById("folderInput");
+const imageInput = document.getElementById("imageInput");
 const thumbList = document.getElementById("thumbList");
 const imageCount = document.getElementById("imageCount");
 const readout = document.getElementById("readout");
@@ -101,6 +102,7 @@ const THEME_STORAGE_KEY = "image-tools-theme";
 const MAX_VISIBLE_BOX_TILES = 3200;
 
 folderInput.addEventListener("change", handleFolderChange);
+imageInput.addEventListener("change", handleImageChange);
 fitButton.addEventListener("click", fitToView);
 actualButton.addEventListener("click", () => setZoom(1, true));
 zoomInButton.addEventListener("click", () => setZoom(state.scale * 1.25));
@@ -157,6 +159,10 @@ topRuler.addEventListener("pointerleave", clearRulerHover);
 leftRuler.addEventListener("pointerleave", clearRulerHover);
 topRuler.addEventListener("click", (event) => handleRulerClick("x", event));
 leftRuler.addEventListener("click", (event) => handleRulerClick("y", event));
+document.addEventListener("dragenter", handleDocumentDragEnter);
+document.addEventListener("dragover", handleDocumentDragOver);
+document.addEventListener("dragleave", handleDocumentDragLeave);
+document.addEventListener("drop", handleDocumentDrop);
 
 function initTheme() {
   let savedTheme = null;
@@ -235,8 +241,18 @@ function handleSidebarResizeKey(event) {
 }
 
 async function handleFolderChange(event) {
+  await loadImageFiles(Array.from(event.target.files || []), "文件夹中未找到图片");
+  event.target.value = "";
+}
+
+async function handleImageChange(event) {
+  await loadImageFiles(Array.from(event.target.files || []), "未选择可读取的图片");
+  event.target.value = "";
+}
+
+async function loadImageFiles(sourceFiles, emptyMessage) {
   cleanupObjectUrls();
-  const files = Array.from(event.target.files || [])
+  const files = sourceFiles
     .filter((file) => IMAGE_TYPES.has(file.type) || /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.name))
     .sort((a, b) => getDisplayPath(a).localeCompare(getDisplayPath(b), "zh-CN", { numeric: true }));
 
@@ -281,13 +297,113 @@ async function handleFolderChange(event) {
     await selectImage(0);
   } else {
     ensureEmptyState();
-    readout.textContent = "文件夹中未找到图片";
+    readout.textContent = emptyMessage;
     draw();
   }
 }
 
 function getDisplayPath(file) {
-  return file.webkitRelativePath || file.name;
+  return file.__displayPath || file.webkitRelativePath || file.name;
+}
+
+function handleDocumentDragEnter(event) {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+  document.body.classList.add("is-dragging-files");
+}
+
+function handleDocumentDragOver(event) {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
+}
+
+function handleDocumentDragLeave(event) {
+  if (!hasDraggedFiles(event)) return;
+  if (event.relatedTarget && document.body.contains(event.relatedTarget)) return;
+  document.body.classList.remove("is-dragging-files");
+}
+
+async function handleDocumentDrop(event) {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+  document.body.classList.remove("is-dragging-files");
+  readout.textContent = "解析拖拽内容中";
+  const files = await getDroppedFiles(event.dataTransfer);
+  await loadImageFiles(files, "拖拽内容中未找到图片");
+}
+
+function hasDraggedFiles(event) {
+  return Array.from(event.dataTransfer?.types || []).includes("Files");
+}
+
+async function getDroppedFiles(dataTransfer) {
+  const items = Array.from(dataTransfer?.items || []);
+  const entries = items
+    .map((item) => (typeof item.webkitGetAsEntry === "function" ? item.webkitGetAsEntry() : null))
+    .filter(Boolean);
+
+  if (entries.length > 0) {
+    const nestedFiles = await Promise.all(entries.map((entry) => readEntryFiles(entry)));
+    return nestedFiles.flat();
+  }
+
+  return Array.from(dataTransfer?.files || []);
+}
+
+async function readEntryFiles(entry, basePath = "") {
+  if (entry.isFile) {
+    const file = await readFileEntry(entry);
+    setDisplayPath(file, `${basePath}${file.name}`);
+    return [file];
+  }
+
+  if (!entry.isDirectory) return [];
+
+  const nextBase = `${basePath}${entry.name}/`;
+  const entries = await readDirectoryEntries(entry);
+  const nestedFiles = await Promise.all(entries.map((child) => readEntryFiles(child, nextBase)));
+  return nestedFiles.flat();
+}
+
+function readFileEntry(entry) {
+  return new Promise((resolve, reject) => {
+    entry.file(resolve, reject);
+  });
+}
+
+function readDirectoryEntries(entry) {
+  const reader = entry.createReader();
+  const entries = [];
+
+  return new Promise((resolve, reject) => {
+    const readBatch = () => {
+      reader.readEntries(
+        (batch) => {
+          if (batch.length === 0) {
+            resolve(entries);
+            return;
+          }
+          entries.push(...batch);
+          readBatch();
+        },
+        reject,
+      );
+    };
+
+    readBatch();
+  });
+}
+
+function setDisplayPath(file, displayPath) {
+  try {
+    Object.defineProperty(file, "__displayPath", {
+      value: displayPath,
+      configurable: true,
+    });
+  } catch {
+    file.__displayPath = displayPath;
+  }
 }
 
 function cleanupObjectUrls() {
@@ -1899,12 +2015,12 @@ function updateReadout(prefix = "") {
 
   const size = item.width && item.height ? `${item.width} x ${item.height}` : "读取尺寸中";
   if (prefix) {
-    readout.textContent = `${prefix} | ${item.name}`;
+    readout.textContent = prefix;
     return;
   }
 
   readout.replaceChildren(
-    document.createTextNode(`${item.name} | ${size}`),
+    document.createTextNode(size),
   );
 
   if (state.selectedPoint) {
@@ -1914,13 +2030,6 @@ function updateReadout(prefix = "") {
     readout.appendChild(point);
   }
 
-  const savedCount = getSavedClickCount(item.name);
-  if (savedCount > 0) {
-    const saved = document.createElement("span");
-    saved.className = "readout-saved";
-    saved.textContent = ` | 已保存 ${savedCount}/2 条分割线`;
-    readout.appendChild(saved);
-  }
 }
 
 function updatePickedColor(point) {
