@@ -110,14 +110,14 @@
               <span>打开图片</span>
             </button>
             <div id="sourceMenu" class="source-menu-panel" hidden>
-              <label class="source-menu-item">
-                <input id="imageInput" class="source-input" type="file" multiple accept="image/*" />
+              <input id="imageInput" class="source-input" type="file" multiple accept="image/*" />
+              <input id="folderInput" class="source-input" type="file" webkitdirectory multiple accept="image/*" />
+              <button id="openImagesButton" class="source-menu-item" type="button">
                 <span>选择图片</span>
-              </label>
-              <label class="source-menu-item">
-                <input id="folderInput" class="source-input" type="file" webkitdirectory multiple accept="image/*" />
+              </button>
+              <button id="openFolderButton" class="source-menu-item" type="button">
                 <span>选择文件夹</span>
-              </label>
+              </button>
             </div>
           </div>
 

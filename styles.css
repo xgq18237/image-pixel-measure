@@ -453,11 +453,17 @@ html[data-theme="dark"] .data-actions #exportButton {
 .source-menu-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  width: 100%;
   min-height: 34px;
   padding: 0 10px;
+  border: 0;
   border-radius: 10px;
+  background: transparent;
   color: var(--ink);
   cursor: pointer;
+  font-weight: 500;
+  text-align: left;
   white-space: nowrap;
 }
 
