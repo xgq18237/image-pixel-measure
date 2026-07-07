@@ -125,8 +125,7 @@ button {
   white-space: nowrap;
 }
 
-.folder-button,
-.image-button,
+.source-button,
 button,
 .readout,
 .export-settings,
@@ -138,8 +137,7 @@ button,
   background: var(--tool-bg);
 }
 
-.folder-button,
-.image-button,
+.source-button,
 button {
   position: relative;
   display: inline-flex;
@@ -155,35 +153,23 @@ button {
     color 160ms ease;
 }
 
-.folder-button {
+.source-button {
   background: var(--accent);
   color: var(--panel-bg);
   font-weight: 500;
   white-space: nowrap;
+  gap: 8px;
 }
 
-html[data-theme="dark"] .folder-button {
+html[data-theme="dark"] .source-button {
   color: #141414;
 }
 
-.folder-button svg,
-.image-button svg,
+.source-button svg,
 button svg {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
-}
-
-.folder-button {
-  gap: 8px;
-}
-
-.image-button {
-  gap: 8px;
-  background: var(--tool-bg);
-  color: var(--ink);
-  font-weight: 500;
-  white-space: nowrap;
 }
 
 .source-input {
@@ -191,8 +177,7 @@ button svg {
 }
 
 button:hover,
-.image-button:hover,
-.folder-button:hover {
+.source-button:hover {
   border-color: var(--line-strong);
 }
 
@@ -446,6 +431,38 @@ html[data-theme="dark"] .data-actions #exportButton {
   gap: 8px;
   margin-left: auto;
   flex: 0 0 auto;
+}
+
+.source-menu {
+  position: relative;
+}
+
+.source-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  min-width: 148px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+}
+
+.source-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.source-menu-item:hover {
+  background: var(--tool-bg);
 }
 
 body.is-dragging-files .workspace,

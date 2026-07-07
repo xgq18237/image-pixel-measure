@@ -9,6 +9,8 @@ const actualButton = document.getElementById("actualButton");
 const zoomInButton = document.getElementById("zoomInButton");
 const zoomOutButton = document.getElementById("zoomOutButton");
 const boxSelectButton = document.getElementById("boxSelectButton");
+const sourceMenuButton = document.getElementById("sourceMenuButton");
+const sourceMenu = document.getElementById("sourceMenu");
 const themeToggle = document.getElementById("themeToggle");
 const exportButton = document.getElementById("exportButton");
 const clearCacheButton = document.getElementById("clearCacheButton");
@@ -108,6 +110,7 @@ actualButton.addEventListener("click", () => setZoom(1, true));
 zoomInButton.addEventListener("click", () => setZoom(state.scale * 1.25));
 zoomOutButton.addEventListener("click", () => setZoom(state.scale / 1.25));
 boxSelectButton.addEventListener("click", toggleBoxSelectMode);
+sourceMenuButton.addEventListener("click", toggleSourceMenu);
 themeToggle.addEventListener("click", toggleTheme);
 exportButton.addEventListener("click", exportSavedClicks);
 clearCacheButton.addEventListener("click", clearSavedClicks);
@@ -163,6 +166,8 @@ document.addEventListener("dragenter", handleDocumentDragEnter);
 document.addEventListener("dragover", handleDocumentDragOver);
 document.addEventListener("dragleave", handleDocumentDragLeave);
 document.addEventListener("drop", handleDocumentDrop);
+document.addEventListener("click", closeSourceMenuOnOutsideClick);
+document.addEventListener("keydown", handleSourceMenuKeydown);
 
 function initTheme() {
   let savedTheme = null;
@@ -241,13 +246,36 @@ function handleSidebarResizeKey(event) {
 }
 
 async function handleFolderChange(event) {
+  setSourceMenuOpen(false);
   await loadImageFiles(Array.from(event.target.files || []), "文件夹中未找到图片");
   event.target.value = "";
 }
 
 async function handleImageChange(event) {
+  setSourceMenuOpen(false);
   await loadImageFiles(Array.from(event.target.files || []), "未选择可读取的图片");
   event.target.value = "";
+}
+
+function toggleSourceMenu() {
+  setSourceMenuOpen(sourceMenu.hidden);
+}
+
+function setSourceMenuOpen(isOpen) {
+  sourceMenu.hidden = !isOpen;
+  sourceMenuButton.setAttribute("aria-expanded", String(isOpen));
+}
+
+function closeSourceMenuOnOutsideClick(event) {
+  if (sourceMenu.hidden) return;
+  if (sourceMenu.contains(event.target) || sourceMenuButton.contains(event.target)) return;
+  setSourceMenuOpen(false);
+}
+
+function handleSourceMenuKeydown(event) {
+  if (event.key !== "Escape" || sourceMenu.hidden) return;
+  setSourceMenuOpen(false);
+  sourceMenuButton.focus();
 }
 
 async function loadImageFiles(sourceFiles, emptyMessage) {
@@ -1488,15 +1516,6 @@ function drawImageArea() {
     state.offsetY,
     state.bitmap.naturalWidth * state.scale,
     state.bitmap.naturalHeight * state.scale,
-  );
-
-  imageCtx.strokeStyle = "#172033";
-  imageCtx.lineWidth = 1;
-  imageCtx.strokeRect(
-    Math.round(state.offsetX) + 0.5,
-    Math.round(state.offsetY) + 0.5,
-    Math.round(state.bitmap.naturalWidth * state.scale),
-    Math.round(state.bitmap.naturalHeight * state.scale),
   );
 
   drawGuides();
