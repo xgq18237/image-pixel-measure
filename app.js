@@ -115,7 +115,7 @@ boxSelectButton.addEventListener("click", toggleBoxSelectMode);
 sourceMenuButton.addEventListener("click", toggleSourceMenu);
 openImagesButton.addEventListener("click", () => imageInput.click());
 openFolderButton.addEventListener("click", () => folderInput.click());
-themeToggle.addEventListener("click", toggleTheme);
+themeToggle.addEventListener("click", (event) => toggleTheme(event));
 exportButton.addEventListener("click", exportSavedClicks);
 clearCacheButton.addEventListener("click", clearSavedClicks);
 horizontalGridInput.addEventListener("input", saveCurrentExportSettings);
@@ -184,15 +184,49 @@ function initTheme() {
   applyTheme();
 }
 
-function toggleTheme() {
-  state.theme = state.theme === "dark" ? "light" : "dark";
-  try {
-    localStorage.setItem(THEME_STORAGE_KEY, state.theme);
-  } catch {
-    // Theme still switches for the current page if storage is unavailable.
+function toggleTheme(event) {
+  const nextTheme = state.theme === "dark" ? "light" : "dark";
+  const applyNextTheme = () => {
+    state.theme = nextTheme;
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, state.theme);
+    } catch {
+      // Theme still switches for the current page if storage is unavailable.
+    }
+    applyTheme();
+    draw();
+  };
+
+  if (!document.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    applyNextTheme();
+    return;
   }
-  applyTheme();
-  draw();
+
+  const rect = event?.currentTarget?.getBoundingClientRect?.() || themeToggle.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const endRadius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y),
+  );
+  const clipPath = [
+    `circle(0px at ${x}px ${y}px)`,
+    `circle(${endRadius}px at ${x}px ${y}px)`,
+  ];
+
+  const transition = document.startViewTransition(applyNextTheme);
+  transition.ready.then(() => {
+    document.documentElement.animate(
+      {
+        clipPath,
+      },
+      {
+        duration: 430,
+        easing: "cubic-bezier(0.33, 1, 0.68, 1)",
+        pseudoElement: "::view-transition-new(root)",
+      },
+    );
+  });
 }
 
 function applyTheme() {

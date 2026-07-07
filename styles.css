@@ -77,6 +77,12 @@ body {
   color: var(--ink);
 }
 
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 body {
   font-size: 14px;
   line-height: 22px;
