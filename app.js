@@ -13,18 +13,24 @@ const sourceMenuButton = document.getElementById("sourceMenuButton");
 const sourceMenu = document.getElementById("sourceMenu");
 const openImagesButton = document.getElementById("openImagesButton");
 const openFolderButton = document.getElementById("openFolderButton");
+const settingsButton = document.getElementById("settingsButton");
+const settingsMenu = document.getElementById("settingsMenu");
+const measureModeToggle = document.getElementById("measureModeToggle");
+const colorModeToggle = document.getElementById("colorModeToggle");
 const themeToggle = document.getElementById("themeToggle");
 const exportButton = document.getElementById("exportButton");
 const clearCacheButton = document.getElementById("clearCacheButton");
 const horizontalGridInput = document.getElementById("horizontalGridInput");
 const verticalGridInput = document.getElementById("verticalGridInput");
 const physicalHeightInput = document.getElementById("physicalHeightInput");
-const dominantColorToggle = document.getElementById("dominantColorToggle");
+const averageColorPanel = document.getElementById("averageColorPanel");
+const averageColorSwatch = document.getElementById("averageColorSwatch");
+const averageColorField = document.getElementById("averageColorField");
+const averageColorPicker = document.getElementById("averageColorPicker");
 const dominantColorPanel = document.getElementById("dominantColorPanel");
 const dominantColorSwatch = document.getElementById("dominantColorSwatch");
 const dominantColorField = document.getElementById("dominantColorField");
 const dominantColorPicker = document.getElementById("dominantColorPicker");
-const copyColorButton = document.getElementById("copyColorButton");
 const pickedColorSwatch = document.getElementById("pickedColorSwatch");
 const pickedColorField = document.getElementById("pickedColorField");
 const pickedColorPicker = document.getElementById("pickedColorPicker");
@@ -56,8 +62,10 @@ const state = {
   savedClicks: {},
   exportSettings: {},
   pickedColor: null,
+  averageColor: null,
   dominantColor: null,
-  dominantColorEnabled: false,
+  measureModeEnabled: true,
+  colorModeEnabled: true,
   colorJobId: 0,
   sampleCanvas: null,
   sampleCtx: null,
@@ -87,8 +95,8 @@ Object.defineProperty(window, "__imageToolState", {
       savedClicks: state.savedClicks,
       exportSettings: state.exportSettings,
       pickedColor: state.pickedColor,
+      averageColor: state.averageColor,
       dominantColor: state.dominantColor,
-      dominantColorEnabled: state.dominantColorEnabled,
       hoverMarkerIndex: state.hoverMarkerIndex,
       guides: getActiveGuides(),
       rulerHover: state.rulerHover,
@@ -115,15 +123,18 @@ boxSelectButton.addEventListener("click", toggleBoxSelectMode);
 sourceMenuButton.addEventListener("click", toggleSourceMenu);
 openImagesButton.addEventListener("click", () => imageInput.click());
 openFolderButton.addEventListener("click", () => folderInput.click());
+settingsButton.addEventListener("click", toggleSettingsMenu);
+measureModeToggle.addEventListener("change", handleModeSettingsChange);
+colorModeToggle.addEventListener("change", handleModeSettingsChange);
 themeToggle.addEventListener("click", (event) => toggleTheme(event));
 exportButton.addEventListener("click", exportSavedClicks);
 clearCacheButton.addEventListener("click", clearSavedClicks);
 horizontalGridInput.addEventListener("input", saveCurrentExportSettings);
 verticalGridInput.addEventListener("input", saveCurrentExportSettings);
 physicalHeightInput.addEventListener("input", saveCurrentExportSettings);
-dominantColorToggle.addEventListener("change", handleDominantColorToggle);
-dominantColorField.addEventListener("click", copyDominantColor);
-copyColorButton.addEventListener("click", copyDominantColor);
+averageColorField.addEventListener("click", () => copyColorValue(averageColorField));
+averageColorPicker.addEventListener("input", () => setManualAverageColor(averageColorPicker.value));
+dominantColorField.addEventListener("click", () => copyColorValue(dominantColorField));
 dominantColorPicker.addEventListener("input", () => setManualDominantColor(dominantColorPicker.value));
 pickedColorField.addEventListener("click", copyPickedColor);
 pickedColorPicker.addEventListener("input", () => setManualPickedColor(pickedColorPicker.value));
@@ -170,8 +181,11 @@ document.addEventListener("dragenter", handleDocumentDragEnter);
 document.addEventListener("dragover", handleDocumentDragOver);
 document.addEventListener("dragleave", handleDocumentDragLeave);
 document.addEventListener("drop", handleDocumentDrop);
+document.addEventListener("paste", handleDocumentPaste);
 document.addEventListener("click", closeSourceMenuOnOutsideClick);
+document.addEventListener("click", closeSettingsMenuOnOutsideClick);
 document.addEventListener("keydown", handleSourceMenuKeydown);
+document.addEventListener("keydown", handleSettingsMenuKeydown);
 
 function initTheme() {
   let savedTheme = null;
@@ -316,6 +330,60 @@ function handleSourceMenuKeydown(event) {
   sourceMenuButton.focus();
 }
 
+function toggleSettingsMenu() {
+  setSettingsMenuOpen(settingsMenu.hidden);
+}
+
+function setSettingsMenuOpen(isOpen) {
+  settingsMenu.hidden = !isOpen;
+  settingsButton.setAttribute("aria-expanded", String(isOpen));
+}
+
+function closeSettingsMenuOnOutsideClick(event) {
+  if (settingsMenu.hidden) return;
+  if (settingsMenu.contains(event.target) || settingsButton.contains(event.target)) return;
+  setSettingsMenuOpen(false);
+}
+
+function handleSettingsMenuKeydown(event) {
+  if (event.key !== "Escape" || settingsMenu.hidden) return;
+  setSettingsMenuOpen(false);
+  settingsButton.focus();
+}
+
+function handleModeSettingsChange() {
+  state.measureModeEnabled = measureModeToggle.checked;
+  state.colorModeEnabled = colorModeToggle.checked;
+  state.colorJobId += 1;
+  state.averageColor = null;
+  state.dominantColor = null;
+  syncModeSettings();
+  draw();
+}
+
+function syncModeSettings() {
+  measureModeToggle.checked = state.measureModeEnabled;
+  colorModeToggle.checked = state.colorModeEnabled;
+  pickedColorField.parentElement.hidden = !state.colorModeEnabled;
+  averageColorPanel.hidden = !state.colorModeEnabled;
+  dominantColorPanel.hidden = !state.colorModeEnabled;
+
+  if (!state.colorModeEnabled) {
+    hideLoupe();
+  }
+
+  if (state.colorModeEnabled && state.bitmap && (!state.averageColor || !state.dominantColor)) {
+    updateAverageColorField("平均色：计算中");
+    updateDominantColorField("主导色系：计算中");
+    computeImageColors(state.bitmap, state.colorJobId);
+  } else if (!state.colorModeEnabled) {
+    updateAverageColorField("平均色：未计算");
+    updateDominantColorField("主导色系：未计算");
+  }
+
+  updateReadout();
+}
+
 async function loadImageFiles(sourceFiles, emptyMessage) {
   cleanupObjectUrls();
   const files = sourceFiles
@@ -344,6 +412,7 @@ async function loadImageFiles(sourceFiles, emptyMessage) {
   state.selectedPoint = null;
   state.hoverPoint = null;
   state.pickedColor = null;
+  state.averageColor = null;
   state.dominantColor = null;
   state.colorJobId += 1;
   resetOverlaySampleCache();
@@ -352,7 +421,8 @@ async function loadImageFiles(sourceFiles, emptyMessage) {
   clearRulerHover();
   hideLoupe();
   updatePickedColorField();
-  updateDominantColorField("平均色：未计算");
+  updateAverageColorField("平均色：未计算");
+  updateDominantColorField("主导色系：未计算");
   updateExportSettingsInputs();
   updateActionButtons();
   renderThumbs();
@@ -399,8 +469,29 @@ async function handleDocumentDrop(event) {
   await loadImageFiles(files, "拖拽内容中未找到图片");
 }
 
+async function handleDocumentPaste(event) {
+  const files = getPastedImageFiles(event.clipboardData);
+  if (files.length === 0) return;
+  event.preventDefault();
+  readout.textContent = "读取粘贴图片中";
+  await loadImageFiles(files, "剪贴板中未找到图片");
+}
+
 function hasDraggedFiles(event) {
   return Array.from(event.dataTransfer?.types || []).includes("Files");
+}
+
+function getPastedImageFiles(clipboardData) {
+  const items = Array.from(clipboardData?.items || []);
+  return items
+    .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+    .map((item, index) => {
+      const file = item.getAsFile();
+      if (!file) return null;
+      setDisplayPath(file, file.name || `pasted-image-${index + 1}.png`);
+      return file;
+    })
+    .filter(Boolean);
 }
 
 async function getDroppedFiles(dataTransfer) {
@@ -581,12 +672,14 @@ async function selectImage(index) {
   clearRulerHover();
   state.pickedColor = null;
   state.bitmap = null;
+  state.averageColor = null;
   state.dominantColor = null;
   resetOverlaySampleCache();
   const colorJobId = ++state.colorJobId;
   hideLoupe();
   updatePickedColorField();
-  updateDominantColorField(state.dominantColorEnabled ? "平均色：计算中" : "平均色：未计算");
+  updateAverageColorField(state.colorModeEnabled ? "平均色：计算中" : "平均色：未计算");
+  updateDominantColorField(state.colorModeEnabled ? "主导色系：计算中" : "主导色系：未计算");
   updateExportSettingsInputs();
   updateActionButtons();
   updateActiveThumb();
@@ -610,8 +703,8 @@ async function selectImage(index) {
   removeEmptyState();
   resizeAll();
   fitToView();
-  if (state.dominantColorEnabled) {
-    computeDominantColor(image, colorJobId);
+  if (state.colorModeEnabled) {
+    computeImageColors(image, colorJobId);
   }
   updateActiveThumb();
 }
@@ -629,10 +722,10 @@ function ensureEmptyState() {
   emptyState.id = "emptyState";
 
   const title = document.createElement("strong");
-  title.textContent = "选择包含图片的文件夹";
+  title.textContent = "选择或拖拽图片";
 
   const detail = document.createElement("span");
-  detail.textContent = "支持 JPG、PNG、GIF、WebP、BMP、SVG 等浏览器可读取格式";
+  detail.textContent = "支持单张、多张、文件夹，以及 JPG、PNG、GIF、WebP、BMP、SVG 等格式";
 
   emptyState.append(title, detail);
   canvasWrap.appendChild(emptyState);
@@ -762,7 +855,11 @@ function handlePointerMove(event) {
 
   updateMarkerHover(event);
   updateBoxTileHover(event);
-  updateLoupe(event);
+  if (state.colorModeEnabled) {
+    updateLoupe(event);
+  } else {
+    hideLoupe();
+  }
 
   if (state.dragging) {
     const dx = event.clientX - state.dragStart.x;
@@ -815,10 +912,15 @@ function handlePointerUp(event) {
     const rect = canvasWrap.getBoundingClientRect();
     const point = screenToImage(event.clientX - rect.left, event.clientY - rect.top);
     if (point) {
-      state.selectedPoint = point;
-      state.hoverPoint = point;
-      updatePickedColor(point);
-      saveCurrentClick();
+      if (state.measureModeEnabled) {
+        state.selectedPoint = point;
+        saveCurrentClick();
+      }
+      if (state.colorModeEnabled) {
+        state.hoverPoint = point;
+        updatePickedColor(point);
+      }
+      updateReadout();
     }
   }
 }
@@ -1111,6 +1213,14 @@ function hideLoupe() {
 
 function updateMarkerHover(event) {
   if (!state.bitmap) return;
+  if (!state.measureModeEnabled) {
+    if (state.hoverMarkerIndex >= 0) {
+      state.hoverMarkerIndex = -1;
+      canvasWrap.classList.remove("marker-hover");
+      draw();
+    }
+    return;
+  }
   if (state.boxSelectEnabled) {
     if (state.hoverMarkerIndex >= 0) {
       state.hoverMarkerIndex = -1;
@@ -1270,6 +1380,10 @@ function screenToImage(x, y, clampToImage = false) {
 }
 
 function handleRulerPointerMove(axis, event) {
+  if (!state.measureModeEnabled) {
+    clearRulerHover();
+    return;
+  }
   if (!state.bitmap) {
     clearRulerHover();
     return;
@@ -1309,6 +1423,7 @@ function handleRulerPointerMove(axis, event) {
 }
 
 function handleRulerClick(axis, event) {
+  if (!state.measureModeEnabled) return;
   if (!state.bitmap || state.rulerHover?.axis !== axis) return;
 
   const guides = getActiveGuides()[axis];
@@ -1577,6 +1692,7 @@ function drawHoverCrosshair(rect) {
 }
 
 function drawGuides() {
+  if (!state.measureModeEnabled) return;
   const rect = imageCanvas.getBoundingClientRect();
   const guides = getActiveGuides();
 
@@ -1835,6 +1951,7 @@ function drawBoxTileLabel(tile) {
 }
 
 function drawSavedMarkers() {
+  if (!state.measureModeEnabled) return;
   const markers = getActiveMarkers();
   if (markers.length === 0) return;
 
@@ -2080,7 +2197,7 @@ function updateReadout(prefix = "") {
     document.createTextNode(size),
   );
 
-  if (state.selectedPoint) {
+  if (state.measureModeEnabled && state.selectedPoint) {
     const point = document.createElement("strong");
     point.className = "readout-point";
     point.textContent = ` | 左 ${state.selectedPoint.x}px，顶 ${state.selectedPoint.y}px`;
@@ -2129,28 +2246,7 @@ function updatePickedColorField() {
   pickedColorPicker.value = state.pickedColor.hex;
 }
 
-function handleDominantColorToggle() {
-  state.dominantColorEnabled = dominantColorToggle.checked;
-  state.colorJobId += 1;
-  state.dominantColor = null;
-  dominantColorPanel.hidden = !state.dominantColorEnabled;
-
-  if (!state.dominantColorEnabled) {
-    updateDominantColorField("平均色：未计算");
-    return;
-  }
-
-  if (!state.bitmap) {
-    updateDominantColorField("平均色：未计算");
-    return;
-  }
-
-  const colorJobId = state.colorJobId;
-  updateDominantColorField("平均色：计算中");
-  computeDominantColor(state.bitmap, colorJobId);
-}
-
-function computeDominantColor(image, colorJobId) {
+function computeImageColors(image, colorJobId) {
   const maxPixels = 250000;
   const pixelCount = image.naturalWidth * image.naturalHeight;
   const scale = Math.min(1, Math.sqrt(maxPixels / pixelCount));
@@ -2167,6 +2263,8 @@ function computeDominantColor(image, colorJobId) {
   ctx.drawImage(image, 0, 0, width, height);
 
   const pixels = ctx.getImageData(0, 0, width, height).data;
+  const bucketSize = 32;
+  const buckets = new Map();
   let redTotal = 0;
   let greenTotal = 0;
   let blueTotal = 0;
@@ -2174,25 +2272,92 @@ function computeDominantColor(image, colorJobId) {
 
   for (let index = 0; index < pixels.length; index += 4) {
     const alpha = pixels[index + 3] / 255;
-    redTotal += pixels[index] * alpha;
-    greenTotal += pixels[index + 1] * alpha;
-    blueTotal += pixels[index + 2] * alpha;
-    alphaTotal += alpha;
+    if (alpha < 0.08) continue;
+
+    const red = pixels[index];
+    const green = pixels[index + 1];
+    const blue = pixels[index + 2];
+    const weight = alpha;
+    redTotal += red * weight;
+    greenTotal += green * weight;
+    blueTotal += blue * weight;
+    alphaTotal += weight;
+
+    const max = Math.max(red, green, blue);
+    const min = Math.min(red, green, blue);
+    const saturation = max === 0 ? 0 : (max - min) / max;
+    const key = [
+      Math.floor(red / bucketSize),
+      Math.floor(green / bucketSize),
+      Math.floor(blue / bucketSize),
+    ].join("-");
+    const bucket = buckets.get(key) || {
+      red: 0,
+      green: 0,
+      blue: 0,
+      weight: 0,
+      score: 0,
+    };
+    bucket.red += red * weight;
+    bucket.green += green * weight;
+    bucket.blue += blue * weight;
+    bucket.weight += weight;
+    bucket.score += weight * (0.7 + saturation * 0.3);
+    buckets.set(key, bucket);
   }
 
   if (colorJobId !== state.colorJobId) return;
 
-  const divisor = alphaTotal || width * height;
-  const red = Math.round(redTotal / divisor);
-  const green = Math.round(greenTotal / divisor);
-  const blue = Math.round(blueTotal / divisor);
-  const hex = rgbToHex(red, green, blue);
-  state.dominantColor = {
-    hex,
+  const dominantBucket = Array.from(buckets.values()).sort((first, second) => second.score - first.score)[0];
+  if (!dominantBucket || alphaTotal <= 0) {
+    updateAverageColorField("平均色：未计算");
+    updateDominantColorField("主导色系：未计算");
+    return;
+  }
+
+  const averageHex = rgbToHex(
+    Math.round(redTotal / alphaTotal),
+    Math.round(greenTotal / alphaTotal),
+    Math.round(blueTotal / alphaTotal),
+  );
+  const dominantHex = rgbToHex(
+    Math.round(dominantBucket.red / dominantBucket.weight),
+    Math.round(dominantBucket.green / dominantBucket.weight),
+    Math.round(dominantBucket.blue / dominantBucket.weight),
+  );
+
+  state.averageColor = {
+    hex: averageHex,
     sampleWidth: width,
     sampleHeight: height,
   };
+  state.dominantColor = {
+    hex: dominantHex,
+    sampleWidth: width,
+    sampleHeight: height,
+  };
+  updateAverageColorField();
   updateDominantColorField();
+}
+
+function updateAverageColorField(text = "") {
+  if (text) {
+    averageColorField.value = text;
+    averageColorSwatch.style.backgroundColor = "#ffffff";
+    averageColorPicker.value = "#ffffff";
+    return;
+  }
+
+  if (!state.averageColor) {
+    averageColorField.value = "平均色：未计算";
+    averageColorSwatch.style.backgroundColor = "#ffffff";
+    averageColorPicker.value = "#ffffff";
+    return;
+  }
+
+  averageColorField.value = state.averageColor.hex;
+  averageColorSwatch.style.backgroundColor = state.averageColor.hex;
+  averageColorPicker.value = state.averageColor.hex;
 }
 
 function updateDominantColorField(text = "") {
@@ -2204,7 +2369,7 @@ function updateDominantColorField(text = "") {
   }
 
   if (!state.dominantColor) {
-    dominantColorField.value = "平均色：未计算";
+    dominantColorField.value = "主导色系：未计算";
     dominantColorSwatch.style.backgroundColor = "#ffffff";
     dominantColorPicker.value = "#ffffff";
     return;
@@ -2215,12 +2380,12 @@ function updateDominantColorField(text = "") {
   dominantColorPicker.value = state.dominantColor.hex;
 }
 
-async function copyDominantColor() {
-  dominantColorField.select();
-  dominantColorField.setSelectionRange(0, dominantColorField.value.length);
+async function copyColorValue(field) {
+  field.select();
+  field.setSelectionRange(0, field.value.length);
 
   try {
-    await navigator.clipboard.writeText(dominantColorField.value);
+    await navigator.clipboard.writeText(field.value);
   } catch (error) {
     document.execCommand("copy");
   }
@@ -2235,6 +2400,17 @@ async function copyPickedColor() {
   } catch (error) {
     document.execCommand("copy");
   }
+}
+
+function setManualAverageColor(hex) {
+  const normalized = hex.toUpperCase();
+  state.averageColor = {
+    hex: normalized,
+    sampleWidth: 0,
+    sampleHeight: 0,
+  };
+  averageColorField.value = normalized;
+  averageColorSwatch.style.backgroundColor = normalized;
 }
 
 function setManualDominantColor(hex) {
@@ -2501,5 +2677,6 @@ function clamp(value, min, max) {
 }
 
 initTheme();
+syncModeSettings();
 resizeAll();
 updateActionButtons();

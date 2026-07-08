@@ -136,6 +136,7 @@ button,
 .readout,
 .export-settings,
 .color-toggle,
+.color-results,
 .color-field,
 .picked-color-field {
   min-height: 40px;
@@ -333,16 +334,27 @@ html[data-theme="dark"] .data-actions #exportButton {
   accent-color: var(--accent);
 }
 
+.color-results,
 .color-field,
 .picked-color-field {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.color-results {
+  padding: 0 6px;
+  flex-wrap: wrap;
+  background: transparent;
+}
+
+.color-field,
+.picked-color-field {
   padding: 0 8px;
 }
 
 .color-field {
-  min-width: 256px;
+  min-width: 172px;
 }
 
 .picked-color-field {
@@ -376,6 +388,7 @@ html[data-theme="dark"] .data-actions #exportButton {
   opacity: 1;
 }
 
+#averageColorField,
 #dominantColorField,
 #pickedColorField {
   min-height: 30px;
@@ -387,26 +400,14 @@ html[data-theme="dark"] .data-actions #exportButton {
   font-variant-numeric: tabular-nums;
 }
 
+#averageColorField,
 #dominantColorField {
-  width: 168px;
+  width: 122px;
   cursor: copy;
 }
 
 #pickedColorField {
   width: 154px;
-}
-
-#copyColorButton {
-  min-width: 30px;
-  width: 30px;
-  min-height: 30px;
-  border-radius: 16px;
-  background: var(--mode-active-bg);
-}
-
-#copyColorButton svg {
-  width: 15px;
-  height: 15px;
 }
 
 #zoomLabel {
@@ -439,11 +440,13 @@ html[data-theme="dark"] .data-actions #exportButton {
   flex: 0 0 auto;
 }
 
-.source-menu {
+.source-menu,
+.settings-menu {
   position: relative;
 }
 
-.source-menu-panel {
+.source-menu-panel,
+.settings-menu-panel {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
@@ -456,10 +459,12 @@ html[data-theme="dark"] .data-actions #exportButton {
   box-shadow: var(--shadow);
 }
 
-.source-menu-item {
+.source-menu-item,
+.settings-menu-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 8px;
   width: 100%;
   min-height: 34px;
   padding: 0 10px;
@@ -473,7 +478,18 @@ html[data-theme="dark"] .data-actions #exportButton {
   white-space: nowrap;
 }
 
-.source-menu-item:hover {
+.settings-menu-item input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.settings-menu-item input:disabled + span {
+  color: var(--soft);
+}
+
+.source-menu-item:hover,
+.settings-menu-item:hover {
   background: var(--tool-bg);
 }
 
@@ -799,11 +815,13 @@ body.resizing-sidebar {
     padding: 12px;
   }
 
+  .color-results,
   .color-field,
   .picked-color-field {
     width: 100%;
   }
 
+  #averageColorField,
   #dominantColorField,
   #pickedColorField {
     flex: 1;
