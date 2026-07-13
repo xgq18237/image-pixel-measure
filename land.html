@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>图片圈地标注工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" crossorigin href="./assets/land-BshmiAEb.css">
+    <link rel="stylesheet" crossorigin href="./assets/styles-CJVQJ7kI.css">
+  </head>
+  <body>
+    <div class="app land-app">
+      <header class="toolbar">
+        <div class="brand">
+          <span>图片圈地</span>
+        </div>
+
+        <div class="page-switch" aria-label="页面">
+          <a class="page-switch-btn" href="./index.html" aria-pressed="false">测量</a>
+          <button class="page-switch-btn active" type="button" aria-pressed="true">圈地</button>
+        </div>
+
+        <div class="tool-group">
+          <button id="fitButton" class="icon-btn" type="button" aria-label="适应窗口" title="适应窗口" data-tooltip="适应窗口">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+          </button>
+          <button id="actualButton" class="ratio-btn" type="button" aria-label="原始尺寸" title="原始尺寸" data-tooltip="原始尺寸">1:1</button>
+          <button id="zoomOutButton" class="icon-btn" type="button" aria-label="缩小" title="缩小" data-tooltip="缩小">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+          </button>
+          <output id="zoomLabel">100%</output>
+          <button id="zoomInButton" class="icon-btn" type="button" aria-label="放大" title="放大" data-tooltip="放大">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="tool-group data-actions">
+          <button id="undoPointButton" class="icon-btn" type="button" aria-label="撤销点" title="撤销点" data-tooltip="撤销点">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 14 4 9l5-5M5 9h9a6 6 0 0 1 0 12h-2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+          </button>
+          <button id="exportButton" class="icon-text-btn" type="button" title="导出地块 JSON" data-tooltip="导出地块 JSON">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+            <span>地块 JSON</span>
+          </button>
+          <button id="clearButton" class="icon-btn" type="button" aria-label="清空地块" title="清空地块" data-tooltip="清空地块">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 4h6m-8.5 4h11M10 11v6m4-6v6M8 8l.7 11A2.2 2.2 0 0 0 10.9 21h2.2a2.2 2.2 0 0 0 2.2-2L16 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="readout" id="readout">未选择图片</div>
+
+        <div class="source-actions">
+          <button id="themeToggle" class="icon-btn" type="button" aria-label="切换黑白模式" title="切换黑白模式" data-tooltip="切换黑白模式">
+            <svg class="theme-icon theme-icon-light" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 17.25A5.25 5.25 0 1 0 12 6.75a5.25 5.25 0 0 0 0 10.5ZM12 2.75v1.5M12 19.75v1.5M4.42 4.42l1.06 1.06M18.52 18.52l1.06 1.06M2.75 12h1.5M19.75 12h1.5M4.42 19.58l1.06-1.06M18.52 5.48l1.06-1.06" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+            </svg>
+            <svg class="theme-icon theme-icon-dark" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14.75 3.5A7.75 7.75 0 1 0 20.5 9.25 6.15 6.15 0 0 1 14.75 3.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+          </button>
+          <input id="imageInput" class="source-input" type="file" accept="image/*" />
+          <button id="openImageButton" class="source-button" type="button" title="打开图片" data-tooltip="打开图片">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5.5 19h13A2.5 2.5 0 0 0 21 16.5v-9A2.5 2.5 0 0 0 18.5 5h-13A2.5 2.5 0 0 0 3 7.5v9A2.5 2.5 0 0 0 5.5 19Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+              <path d="m4 15 3.2-3.2a1.2 1.2 0 0 1 1.7 0l2.1 2.1 3.1-3.1a1.2 1.2 0 0 1 1.7 0L20 14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
+            <span>打开图片</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="land-workspace">
+        <div class="land-canvas-wrap" id="canvasWrap">
+          <canvas id="landCanvas"></canvas>
+        </div>
+
+        <aside class="land-data-panel">
+          <div class="land-data-head">
+            <span id="landDataTitle">地块数据</span>
+            <button id="copyDataButton" class="icon-text-btn" type="button" disabled title="复制数据" data-tooltip="复制数据">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 9.5A2.5 2.5 0 0 1 11.5 7h5A2.5 2.5 0 0 1 19 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 9 16.5v-7Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                <path d="M6.5 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+              </svg>
+              <span>复制</span>
+            </button>
+          </div>
+          <pre id="landDataOutput" class="land-data-output">悬浮或点击地块查看数据</pre>
+        </aside>
+      </main>
+    </div>
+
+    <script src="./land.js"></script>
+  </body>
+</html>
