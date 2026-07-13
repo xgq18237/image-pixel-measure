@@ -36,6 +36,14 @@ const pickedColorField = document.getElementById("pickedColorField");
 const pickedColorPicker = document.getElementById("pickedColorPicker");
 const workspace = document.querySelector(".workspace");
 const sidebarResizer = document.getElementById("sidebarResizer");
+const filesTabButton = document.getElementById("filesTabButton");
+const dataTabButton = document.getElementById("dataTabButton");
+const dataPanel = document.getElementById("dataPanel");
+const dataEditor = document.getElementById("dataEditor");
+const copyDataButton = document.getElementById("copyDataButton");
+const applyDataButton = document.getElementById("applyDataButton");
+const sidebarCollapseButton = document.getElementById("sidebarCollapseButton");
+const sidebarExpandButton = document.getElementById("sidebarExpandButton");
 const canvasWrap = document.getElementById("canvasWrap");
 const imageCanvas = document.getElementById("imageCanvas");
 const topRuler = document.getElementById("topRuler");
@@ -60,6 +68,9 @@ const state = {
   selectedPoint: null,
   hoverPoint: null,
   savedClicks: {},
+  dataOverrides: {},
+  sidebarView: "files",
+  sidebarCollapsed: false,
   exportSettings: {},
   pickedColor: null,
   averageColor: null,
@@ -93,6 +104,7 @@ Object.defineProperty(window, "__imageToolState", {
       selectedPoint: state.selectedPoint,
       hoverPoint: state.hoverPoint,
       savedClicks: state.savedClicks,
+      dataOverrides: state.dataOverrides,
       exportSettings: state.exportSettings,
       pickedColor: state.pickedColor,
       averageColor: state.averageColor,
@@ -138,6 +150,13 @@ dominantColorField.addEventListener("click", () => copyColorValue(dominantColorF
 dominantColorPicker.addEventListener("input", () => setManualDominantColor(dominantColorPicker.value));
 pickedColorField.addEventListener("click", copyPickedColor);
 pickedColorPicker.addEventListener("input", () => setManualPickedColor(pickedColorPicker.value));
+filesTabButton.addEventListener("click", () => setSidebarView("files"));
+dataTabButton.addEventListener("click", () => setSidebarView("data"));
+copyDataButton.addEventListener("click", copyCurrentData);
+applyDataButton.addEventListener("click", applyEditedData);
+dataEditor.addEventListener("input", handleDataEditorInput);
+sidebarCollapseButton.addEventListener("click", collapseSidebar);
+sidebarExpandButton.addEventListener("click", expandSidebar);
 sidebarResizer.addEventListener("pointerdown", startSidebarResize);
 sidebarResizer.addEventListener("pointermove", resizeSidebar);
 sidebarResizer.addEventListener("pointerup", finishSidebarResize);
@@ -297,6 +316,33 @@ function handleSidebarResizeKey(event) {
   if (state.bitmap) fitToView();
 }
 
+function setSidebarView(view) {
+  state.sidebarView = view === "data" ? "data" : "files";
+  filesTabButton.classList.toggle("active", state.sidebarView === "files");
+  dataTabButton.classList.toggle("active", state.sidebarView === "data");
+  filesTabButton.setAttribute("aria-pressed", String(state.sidebarView === "files"));
+  dataTabButton.setAttribute("aria-pressed", String(state.sidebarView === "data"));
+  thumbList.hidden = state.sidebarView !== "files";
+  dataPanel.hidden = state.sidebarView !== "data";
+  if (state.sidebarView === "data") updateDataEditor();
+}
+
+function collapseSidebar() {
+  state.sidebarCollapsed = true;
+  workspace.classList.add("sidebar-collapsed");
+  sidebarExpandButton.hidden = false;
+  resizeAll();
+  if (state.bitmap) fitToView();
+}
+
+function expandSidebar() {
+  state.sidebarCollapsed = false;
+  workspace.classList.remove("sidebar-collapsed");
+  sidebarExpandButton.hidden = true;
+  resizeAll();
+  if (state.bitmap) fitToView();
+}
+
 async function handleFolderChange(event) {
   setSourceMenuOpen(false);
   await loadImageFiles(Array.from(event.target.files || []), "文件夹中未找到图片");
@@ -414,6 +460,7 @@ async function loadImageFiles(sourceFiles, emptyMessage) {
   state.pickedColor = null;
   state.averageColor = null;
   state.dominantColor = null;
+  state.dataOverrides = {};
   state.colorJobId += 1;
   resetOverlaySampleCache();
   state.hoverMarkerIndex = -1;
@@ -425,6 +472,7 @@ async function loadImageFiles(sourceFiles, emptyMessage) {
   updateDominantColorField("主导色系：未计算");
   updateExportSettingsInputs();
   updateActionButtons();
+  updateDataEditor();
   renderThumbs();
   imageCount.textContent = String(state.images.length);
 
@@ -682,6 +730,7 @@ async function selectImage(index) {
   updateDominantColorField(state.colorModeEnabled ? "主导色系：计算中" : "主导色系：未计算");
   updateExportSettingsInputs();
   updateActionButtons();
+  updateDataEditor();
   updateActiveThumb();
   updateReadout("载入图片中");
 
@@ -707,6 +756,7 @@ async function selectImage(index) {
     computeImageColors(image, colorJobId);
   }
   updateActiveThumb();
+  updateDataEditor();
 }
 
 function removeEmptyState() {
@@ -1426,20 +1476,53 @@ function handleRulerClick(axis, event) {
   if (!state.measureModeEnabled) return;
   if (!state.bitmap || state.rulerHover?.axis !== axis) return;
 
+  toggleGuideValue(axis, state.rulerHover.value, state.hoverGuideIndex);
+
+  handleRulerPointerMove(axis, event);
+  updateActionButtons();
+  updateDataEditor();
+}
+
+function toggleGuideValue(axis, value, existingIndex = null) {
+  const item = state.images[state.activeIndex];
+  if (!item || !Number.isFinite(value)) return;
+
   const guides = getActiveGuides()[axis];
-  if (state.hoverGuideIndex >= 0) {
-    guides[state.hoverGuideIndex] = null;
+  const guideIndex = Number.isInteger(existingIndex) && existingIndex >= 0
+    ? existingIndex
+    : findGuideIndexNearValue(axis, value);
+
+  if (guideIndex >= 0) {
+    guides[guideIndex] = null;
     state.hoverGuideIndex = -1;
-  } else if (!guides.includes(state.rulerHover.value)) {
-    const emptyIndex = guides.findIndex((value) => value === null);
+  } else if (!guides.includes(value)) {
+    const emptyIndex = guides.findIndex((guide) => guide === null);
     if (emptyIndex >= 0) {
-      guides[emptyIndex] = state.rulerHover.value;
+      guides[emptyIndex] = value;
     } else {
-      guides.push(state.rulerHover.value);
+      guides.push(value);
     }
   }
 
-  handleRulerPointerMove(axis, event);
+  delete state.dataOverrides[item.name];
+}
+
+function findGuideIndexNearValue(axis, value) {
+  const guides = getActiveGuides()[axis];
+  const tolerance = Math.max(1, Math.ceil(8 / state.scale));
+  let closestIndex = -1;
+  let closestDistance = tolerance;
+
+  guides.forEach((guide, index) => {
+    if (guide === null) return;
+    const distance = Math.abs(guide - value);
+    if (distance <= closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+  });
+
+  return closestIndex;
 }
 
 function clearRulerHover() {
@@ -2447,21 +2530,13 @@ function saveCurrentClick() {
   const item = state.images[state.activeIndex];
   if (!item || !state.selectedPoint) return;
 
-  if (!state.savedClicks[item.name]) {
-    state.savedClicks[item.name] = [null, null];
-  }
-
-  const markers = state.savedClicks[item.name];
-  const nextIndex = markers.findIndex((marker) => !marker);
-  const targetIndex = nextIndex >= 0 ? nextIndex : 1;
-  markers[targetIndex] = {
-    index: targetIndex + 1,
-    y: state.selectedPoint.y,
-  };
+  toggleGuideValue("y", state.selectedPoint.y);
+  delete state.dataOverrides[item.name];
 
   draw();
   updateReadout();
   updateActionButtons();
+  updateDataEditor();
 }
 
 function exportSavedClicks() {
@@ -2480,6 +2555,62 @@ function exportSavedClicks() {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+function updateDataEditor() {
+  const item = state.images[state.activeIndex];
+  const hasItem = Boolean(item);
+  dataEditor.disabled = !hasItem;
+  copyDataButton.disabled = !hasItem;
+  applyDataButton.disabled = !hasItem;
+
+  if (!item) {
+    dataEditor.value = "";
+    dataEditor.classList.remove("invalid");
+    return;
+  }
+
+  const data = buildImageExport(item, state.savedClicks[item.name] || []);
+  dataEditor.value = JSON.stringify(data, null, 2);
+  dataEditor.classList.remove("invalid");
+}
+
+function handleDataEditorInput() {
+  dataEditor.classList.remove("invalid");
+  applyDataButton.disabled = !state.images[state.activeIndex];
+}
+
+function applyEditedData() {
+  const item = state.images[state.activeIndex];
+  if (!item) return;
+
+  try {
+    const parsed = JSON.parse(dataEditor.value);
+    state.dataOverrides[item.name] = parsed;
+    dataEditor.classList.remove("invalid");
+    updateActionButtons();
+  } catch {
+    dataEditor.classList.add("invalid");
+  }
+}
+
+async function copyCurrentData() {
+  const item = state.images[state.activeIndex];
+  if (!item) return;
+
+  try {
+    JSON.parse(dataEditor.value);
+  } catch {
+    dataEditor.classList.add("invalid");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(dataEditor.value);
+  } catch {
+    dataEditor.select();
+    document.execCommand("copy");
+  }
 }
 
 function buildExportFolders() {
@@ -2503,12 +2634,12 @@ function buildExportFolders() {
 }
 
 function buildImageExport(item, markers = []) {
+  if (state.dataOverrides[item.name]) {
+    return state.dataOverrides[item.name];
+  }
+
   const width = item?.width || null;
   const height = item?.height || null;
-  const sortedY = markers.filter(Boolean).map((marker) => marker.y).sort((a, b) => a - b);
-  const hasMarkers = sortedY.length > 0;
-  const firstY = hasMarkers ? sortedY[0] : 0;
-  const secondY = hasMarkers ? (sortedY[1] ?? null) : 0;
   const settings = getExportSettings(item);
   const scaleDenominator =
     settings.physicalHeight !== null && height
@@ -2518,24 +2649,22 @@ function buildImageExport(item, markers = []) {
   return {
     width,
     height,
-    topStartPixel: 0,
-    topEndPixel: firstY,
-    midStartPixel: firstY,
-    midEndPixel: secondY,
-    bottomStartPixel: secondY,
-    bottomEndPixel: height,
     horizontalGridCount: settings.horizontalGridCount,
     verticalGridCount: settings.verticalGridCount,
     scaleDenominator,
-    splitAreas: buildSplitAreas(item.guides?.x || []),
+    horizontalClickAreas: buildPairedAreas((item.guides?.y || []).filter(Number.isFinite)),
+    verticalClickAreas: buildPairedAreas((item.guides?.x || []).filter(Number.isFinite)),
   };
 }
 
-function buildSplitAreas(guides) {
+function buildPairedAreas(sourceValues) {
+  const values = sourceValues
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
   const areas = [];
-  for (let index = 0; index < guides.length; index += 2) {
-    const first = guides[index];
-    const second = guides[index + 1];
+  for (let index = 0; index < values.length; index += 2) {
+    const first = values[index];
+    const second = values[index + 1];
     if (!Number.isFinite(first) || !Number.isFinite(second)) continue;
     areas.push([Math.min(first, second), Math.max(first, second)]);
   }
@@ -2613,6 +2742,7 @@ function deleteSavedMarker(markerIndex) {
   if (!item || !state.savedClicks[item.name]) return;
 
   state.savedClicks[item.name][markerIndex] = null;
+  delete state.dataOverrides[item.name];
 
   if (!state.savedClicks[item.name].some(Boolean)) {
     delete state.savedClicks[item.name];
@@ -2624,6 +2754,7 @@ function deleteSavedMarker(markerIndex) {
   draw();
   updateReadout();
   updateActionButtons();
+  updateDataEditor();
 }
 
 function clearSavedClicks() {
@@ -2631,11 +2762,20 @@ function clearSavedClicks() {
   if (!window.confirm("确认清空已保存的点击缓存吗？")) return;
 
   state.savedClicks = {};
+  state.dataOverrides = {};
+  state.images.forEach((item) => {
+    if (item.guides) {
+      item.guides.x = [];
+      item.guides.y = [];
+    }
+  });
   state.hoverMarkerIndex = -1;
+  clearRulerHover();
   canvasWrap.classList.remove("marker-hover");
   draw();
   updateReadout();
   updateActionButtons();
+  updateDataEditor();
 }
 
 function updateActionButtons() {
@@ -2649,7 +2789,11 @@ function getSavedClickCount(imageName) {
 }
 
 function hasSavedClicks() {
-  return Object.values(state.savedClicks).some((clicks) => clicks.some(Boolean));
+  return (
+    Object.values(state.savedClicks).some((clicks) => clicks.some(Boolean)) ||
+    state.images.some((item) => (item.guides?.x || []).some(Number.isFinite) || (item.guides?.y || []).some(Number.isFinite)) ||
+    Object.keys(state.dataOverrides).length > 0
+  );
 }
 
 function getActiveMarkers() {
@@ -2678,5 +2822,7 @@ function clamp(value, min, max) {
 
 initTheme();
 syncModeSettings();
+setSidebarView("files");
 resizeAll();
 updateActionButtons();
+updateDataEditor();

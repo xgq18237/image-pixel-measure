@@ -19,6 +19,11 @@
           <span>图片像素测距</span>
         </div>
 
+        <div class="page-switch" aria-label="页面">
+          <button id="measurePageButton" class="page-switch-btn active" type="button" aria-pressed="true">测量</button>
+          <a id="landPageButton" class="page-switch-btn" href="./land.html" aria-pressed="false">圈地</a>
+        </div>
+
         <div class="tool-group">
           <button id="fitButton" class="icon-btn" type="button" aria-label="适应窗口" title="适应窗口" data-tooltip="适应窗口">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -178,11 +183,44 @@
 
         <aside class="sidebar">
           <div class="sidebar-head">
-            <span>图片</span>
-            <span id="imageCount">0</span>
+            <div class="sidebar-tabs" role="tablist" aria-label="侧栏视图">
+              <button id="filesTabButton" class="sidebar-tab active" type="button" aria-pressed="true">文件</button>
+              <button id="dataTabButton" class="sidebar-tab" type="button" aria-pressed="false">数据</button>
+            </div>
+            <div class="sidebar-head-actions">
+              <span id="imageCount">0</span>
+              <button id="sidebarCollapseButton" class="icon-btn sidebar-collapse-btn" type="button" aria-label="收起侧栏" title="收起侧栏" data-tooltip="收起侧栏">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 6-6 6 6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div id="thumbList" class="thumb-list"></div>
+          <div id="dataPanel" class="measure-data-panel" hidden>
+            <div class="measure-data-actions">
+              <button id="copyDataButton" class="icon-text-btn" type="button" disabled title="复制当前数据" data-tooltip="复制当前数据">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 9.5A2.5 2.5 0 0 1 11.5 7h5A2.5 2.5 0 0 1 19 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 9 16.5v-7Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                  <path d="M6.5 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+                </svg>
+                <span>复制</span>
+              </button>
+              <button id="applyDataButton" class="icon-text-btn" type="button" disabled title="应用数据" data-tooltip="应用数据">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+                <span>应用</span>
+              </button>
+            </div>
+            <textarea id="dataEditor" class="measure-data-editor" spellcheck="false" placeholder="选择图片后显示当前数据"></textarea>
+          </div>
         </aside>
+        <button id="sidebarExpandButton" class="sidebar-expand-btn" type="button" aria-label="展开侧栏" title="展开侧栏" data-tooltip="展开侧栏" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+          </svg>
+        </button>
       </main>
     </div>
 

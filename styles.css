@@ -233,6 +233,35 @@ button[aria-pressed="true"] {
   gap: 6px;
 }
 
+.page-switch {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 3px;
+  border-radius: 24px;
+  background: var(--tool-bg);
+}
+
+.page-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.page-switch-btn.active {
+  background: var(--mode-active-bg);
+  color: var(--ink);
+  box-shadow: 0 1px 0 var(--line);
+}
+
 .icon-btn,
 .ratio-btn {
   width: 40px;
@@ -503,6 +532,7 @@ body.is-dragging-files .toolbar {
 
 .workspace {
   --sidebar-width: 292px;
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 7px var(--sidebar-width);
   min-height: 0;
@@ -510,6 +540,10 @@ body.is-dragging-files .toolbar {
   border: 1px solid var(--line);
   border-radius: 36px;
   background: var(--panel-bg);
+}
+
+.workspace.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr) 0 0;
 }
 
 .viewer-panel {
@@ -580,6 +614,18 @@ body.is-dragging-files .toolbar {
 
 .canvas-wrap.marker-hover {
   cursor: pointer;
+}
+
+.canvas-wrap.land-close-hover {
+  cursor: pointer;
+}
+
+body[data-page-mode="land"] #boxSelectButton,
+body[data-page-mode="land"] .export-settings,
+body[data-page-mode="land"] .color-results,
+body[data-page-mode="land"] .picked-color-field,
+body[data-page-mode="land"] .settings-menu {
+  display: none;
 }
 
 .loupe {
@@ -664,6 +710,27 @@ body.is-dragging-files .toolbar {
   touch-action: none;
 }
 
+.workspace.sidebar-collapsed .sidebar-resizer,
+.workspace.sidebar-collapsed .sidebar {
+  display: none;
+}
+
+.sidebar-expand-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  z-index: 5;
+  width: 34px;
+  min-width: 34px;
+  height: 68px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  transform: translateY(-50%);
+}
+
 .sidebar-resizer::after {
   content: "";
   position: absolute;
@@ -692,6 +759,42 @@ body.resizing-sidebar {
   font-weight: 500;
 }
 
+.sidebar-tabs {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 3px;
+  border-radius: 18px;
+  background: var(--tool-bg);
+}
+
+.sidebar-tab {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sidebar-tab.active {
+  background: var(--mode-active-bg);
+  color: var(--ink);
+}
+
+.sidebar-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-collapse-btn {
+  width: 30px;
+  min-width: 30px;
+  min-height: 30px;
+}
+
 #imageCount {
   color: var(--muted);
   font-weight: 400;
@@ -704,6 +807,43 @@ body.resizing-sidebar {
   overflow-x: hidden;
   padding: 10px;
   scrollbar-gutter: stable;
+}
+
+.measure-data-panel {
+  display: grid;
+  grid-template-rows: 46px minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+}
+
+.measure-data-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.measure-data-actions .icon-text-btn {
+  min-width: 86px;
+}
+
+.measure-data-editor {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: var(--panel-bg);
+  color: var(--ink);
+  font: 12px/1.55 Consolas, "SFMono-Regular", Menlo, monospace;
+  white-space: pre;
+}
+
+.measure-data-editor.invalid {
+  box-shadow: inset 0 0 0 2px rgba(225, 29, 72, 0.45);
 }
 
 .image-group {
@@ -834,6 +974,18 @@ body.resizing-sidebar {
     border-radius: 28px;
   }
 
+  .workspace.sidebar-collapsed {
+    grid-template-rows: minmax(0, 1fr) 0 0;
+  }
+
+  .sidebar-expand-btn {
+    top: auto;
+    right: 16px;
+    bottom: 12px;
+    height: 34px;
+    transform: none;
+  }
+
   .sidebar-resizer {
     display: none;
   }
@@ -852,6 +1004,10 @@ body.resizing-sidebar {
     gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
+  }
+
+  .measure-data-panel {
+    grid-template-rows: 42px minmax(0, 1fr);
   }
 
   .image-group {
